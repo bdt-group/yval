@@ -22,7 +22,8 @@
 -export([format_error/1, format_error/2, format_ctx/1]).
 %% Simple types
 -export([pos_int/0, pos_int/1, non_neg_int/0, non_neg_int/1]).
--export([int/0, int/2, number/1, number/2, pos_number/0, octal/0]).
+-export([int/0, int/2, number/0, number/1, number/2, pos_number/0, octal/0]).
+-export([float/0, float/1, float/2]).
 -export([binary/0, binary/1, binary/2]).
 -export([string/0, string/1, string/2]).
 -export([enum/1, bool/0, atom/0, any/0]).
@@ -175,6 +176,10 @@ int(Min, Max) when is_integer(Min) andalso
             end
     end.
 
+-spec number() -> validator(number()).
+number() ->
+    fun to_number/1.
+
 -spec number(number()) -> validator(number()).
 number(Min) ->
     number(Min, infinity).
@@ -188,6 +193,25 @@ number(Min, Max) when is_number(Min) andalso
                 N when N >= Min, N =< Max -> N;
                 Bad -> fail({bad_number, Min, Max, Bad})
             end
+    end.
+
+-spec float() -> validator(float()).
+float() ->
+    fun to_float/1.
+
+-spec float(number()) -> validator(float()).
+float(Min) ->
+    float(Min, infinity).
+
+-spec float(number(), number() | infinity) -> validator(float()).
+float(Min, Max) when is_number(Min) andalso
+                     (is_number(Max) orelse Max == infinity) andalso
+                     Min =< Max ->
+    fun(Val) ->
+        case to_float(Val) of
+            N when N >= Min, N =< Max -> N;
+            Bad -> fail({bad_float, Min, Max, Bad})
+        end
     end.
 
 -spec pos_number() -> validator(number()).
@@ -953,6 +977,12 @@ to_number(N) when is_number(N) ->
     N;
 to_number(Bad) ->
     fail({bad_number, Bad}).
+
+-spec to_float(term()) -> float().
+to_float(N) when is_float(N) ->
+    N;
+to_float(Bad) ->
+    fail({bad_float, Bad}).
 
 -spec to_timeout(term(), timeout_unit()) -> pos_integer() | infinity().
 to_timeout(Term, Unit) ->
